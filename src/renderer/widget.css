@@ -1,0 +1,18 @@
+:root { color-scheme: dark; font-family: Inter, "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+.widget { height: 100%; overflow: hidden; border: 1px solid #34402d; border-radius: 9px; background: linear-gradient(145deg, #111820f5, #090e13f5); color: #dce3e7; box-shadow: 0 12px 35px #0009, inset 0 1px #ffffff09; }
+header { -webkit-app-region: drag; height: 51px; display: flex; align-items: center; justify-content: space-between; padding: 0 9px 0 13px; border-bottom: 1px solid #222c33; }
+.identity { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.identity strong { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 650; }
+.status-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: #9bea53; box-shadow: 0 0 8px #9bea53; }
+.status-dot.error { background: #ff6159; box-shadow: 0 0 8px #ff6159; }
+.actions { -webkit-app-region: no-drag; display: flex; gap: 2px; }
+button { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6f7c84; cursor: pointer; font-size: 14px; }
+button:hover { background: #1c252c; color: #b9f27e; }
+.metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 18px 15px 16px; }
+.metric { min-width: 0; padding-right: 14px; border-right: 1px solid #263038; }.metric:last-child { padding-right: 0; border: 0; }
+.label { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: #9aa6ad; font-size: 13px; font-weight: 600; }.label strong { color: #f0f5f7; font: 25px Consolas, monospace; font-weight: 500; letter-spacing: -1px; }
+.track { height: 6px; margin-top: 11px; overflow: hidden; border-radius: 3px; background: #273038; }.track span { display: block; width: 0; height: 100%; border-radius: inherit; background: #9bea53; transition: width .35s ease; }.memory .track span { background: #45d4ce; }
+.collapsed .metrics { display: none; }
+.collapsed header { border-bottom: 0; }

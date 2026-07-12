@@ -186,6 +186,7 @@ list.addEventListener('click', (event) => {
 $('#add-server').addEventListener('click', () => openDialog());
 $('#edit-server').addEventListener('click', () => openDialog(state.servers.find((server) => server.id === state.selectedId)));
 $('#refresh').addEventListener('click', collect);
+$('#show-widget').addEventListener('click', () => window.monitor.windowAction('show-widget'));
 $('#process-search').addEventListener('input', renderProcesses);
 $('#auth-type').addEventListener('change', updateSecretLabel);
 $('#close-dialog').addEventListener('click', () => dialog.close());
@@ -223,7 +224,7 @@ $('#delete-server').addEventListener('click', async () => {
 
 async function init() {
   state.servers = await window.monitor.listServers();
-  selectServer(state.servers[0].id);
+  selectServer((state.servers.find((server) => !server.demo) || state.servers[0]).id);
 }
 
 init();

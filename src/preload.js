@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('monitor', {
   saveServer: (server) => ipcRenderer.invoke('servers:save', server),
   deleteServer: (id) => ipcRenderer.invoke('servers:delete', id),
   collectMetrics: (id) => ipcRenderer.invoke('metrics:collect', id),
+  windowAction: (action) => ipcRenderer.invoke('window:action', action),
 });

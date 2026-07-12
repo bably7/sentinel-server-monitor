@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage, screen } = require('electron');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs/promises');
@@ -15,8 +15,20 @@ const SAMPLE_SERVER = {
   demo: true,
 };
 
+let mainWindow;
+let widgetWindow;
+
+function windowOptions() {
+  return {
+    preload: path.join(__dirname, 'preload.js'),
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+  };
+}
+
 function createWindow() {
-  const window = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1080,
@@ -24,15 +36,36 @@ function createWindow() {
     backgroundColor: '#090d12',
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#090d12', symbolColor: '#8a969f', height: 42 },
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
+    webPreferences: windowOptions(),
   });
 
-  window.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.on('closed', () => (mainWindow = null));
+}
+
+function createWidget() {
+  const { workArea } = screen.getPrimaryDisplay();
+  widgetWindow = new BrowserWindow({
+    width: 318,
+    height: 148,
+    x: workArea.x + workArea.width - 338,
+    y: workArea.y + 20,
+    minWidth: 280,
+    minHeight: 48,
+    maxWidth: 420,
+    maxHeight: 240,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    backgroundColor: '#00000000',
+    webPreferences: windowOptions(),
+  });
+  widgetWindow.setAlwaysOnTop(true, 'floating');
+  widgetWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  widgetWindow.loadFile(path.join(__dirname, 'renderer', 'widget.html'));
+  widgetWindow.on('closed', () => (widgetWindow = null));
 }
 
 function configPath() {
@@ -263,9 +296,31 @@ ipcMain.handle('metrics:collect', async (_event, id) => {
   return parseMetrics(await execSsh(server, METRICS_COMMAND), server.id);
 });
 
+ipcMain.handle('window:action', (event, action) => {
+  const sourceWindow = BrowserWindow.fromWebContents(event.sender);
+  if (action === 'show-main') {
+    if (!mainWindow) createWindow();
+    mainWindow.show();
+    mainWindow.focus();
+  } else if (action === 'show-widget') {
+    if (!widgetWindow) createWidget();
+    widgetWindow.show();
+  } else if (action === 'collapse-widget' && sourceWindow === widgetWindow) {
+    widgetWindow.setSize(widgetWindow.getSize()[0], 52, true);
+  } else if (action === 'expand-widget' && sourceWindow === widgetWindow) {
+    widgetWindow.setSize(widgetWindow.getSize()[0], 148, true);
+  } else if (action === 'close-widget' && sourceWindow === widgetWindow) {
+    widgetWindow.close();
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
-  app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow());
+  createWidget();
+  app.on('activate', () => {
+    if (!mainWindow) createWindow();
+    if (!widgetWindow) createWidget();
+  });
 });
 
 app.on('window-all-closed', () => {

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>Sentinel 浮窗</title>
+    <link rel="stylesheet" href="widget.css" />
+  </head>
+  <body>
+    <section id="widget" class="widget">
+      <header>
+        <div class="identity"><span id="status-dot" class="status-dot"></span><strong id="server-name">正在连接</strong></div>
+        <div class="actions">
+          <button id="refresh" title="立即刷新">↻</button>
+          <button id="collapse" title="折叠">−</button>
+          <button id="open-main" title="打开主面板">□</button>
+          <button id="close" title="关闭浮窗">×</button>
+        </div>
+      </header>
+      <div class="metrics">
+        <div class="metric cpu"><div class="label"><span>CPU</span><strong id="cpu-value">--%</strong></div><div class="track"><span id="cpu-bar"></span></div></div>
+        <div class="metric memory"><div class="label"><span>内存</span><strong id="memory-value">--%</strong></div><div class="track"><span id="memory-bar"></span></div></div>
+      </div>
+    </section>
+    <script src="widget.js"></script>
+  </body>
+</html>
