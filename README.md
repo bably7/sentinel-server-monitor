@@ -8,11 +8,15 @@
 
 ### 主监控面板
 
-![Sentinel 主监控面板](docs/screenshots/dashboard.png)
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Sentinel 主监控面板" width="100%">
+</p>
 
 ### 桌面浮窗
 
-<img src="docs/screenshots/widget.png" alt="Sentinel CPU 和内存桌面浮窗" width="318">
+<p align="center">
+  <img src="docs/screenshots/widget.png" alt="Sentinel CPU 和内存桌面浮窗" width="318">
+</p>
 
 ## 功能
 
