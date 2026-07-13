@@ -23,6 +23,13 @@ function resetMetrics() {
   $('#memory-value').textContent = '--%';
 }
 
+function applyBackground(background) {
+  const value = background?.dataUrl
+    ? `url("${background.dataUrl}")`
+    : 'url("assets/background.jpg")';
+  document.documentElement.style.setProperty('--widget-image', value);
+}
+
 async function collect() {
   if (!serverId || collecting) return;
   const requestedId = serverId;
@@ -54,7 +61,11 @@ $('#collapse').addEventListener('click', async () => {
 });
 
 async function init() {
-  const server = await window.monitor.selectedServer();
+  const [server, background] = await Promise.all([
+    window.monitor.selectedServer(),
+    window.monitor.getBackground(),
+  ]);
+  applyBackground(background);
   serverId = server.id;
   serverName = server.name;
   resetMetrics();
@@ -70,5 +81,6 @@ window.monitor.onSelectedServer((server) => {
   $('#server-name').textContent = serverName;
   collect();
 });
+window.monitor.onBackgroundChanged(applyBackground);
 
 init().catch((error) => setError(error.message));

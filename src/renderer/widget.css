@@ -5,13 +5,14 @@
   --widget-muted: rgba(231, 243, 248, .72);
   --widget-border: rgba(240, 252, 255, .32);
   --widget-line: rgba(255, 255, 255, .16);
+  --widget-image: url("assets/background.jpg");
   --widget-image-opacity: .64;
   font-family: Inter, "Segoe UI", "Microsoft YaHei UI", sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
 .widget { position: relative; isolation: isolate; height: 100%; overflow: hidden; border: 1px solid var(--widget-border); border-radius: 20px; background: var(--widget-bg); color: var(--widget-text); box-shadow: inset 0 1px rgba(255, 255, 255, .42); backdrop-filter: blur(30px) saturate(155%); clip-path: inset(0 round 20px); contain: paint; }
-.widget::before { content: ""; position: absolute; z-index: -2; inset: 0; border-radius: inherit; background: url("assets/background.jpg") center / cover; opacity: var(--widget-image-opacity); }
+.widget::before { content: ""; position: absolute; z-index: -2; inset: 0; border-radius: inherit; background: var(--widget-image) center / cover; opacity: var(--widget-image-opacity); }
 .widget::after { content: ""; position: absolute; z-index: -1; inset: 0; background: radial-gradient(circle at 82% 0, rgba(105, 245, 236, .22), transparent 38%), linear-gradient(145deg, rgba(255, 255, 255, .14), transparent 45%); pointer-events: none; }
 header { -webkit-app-region: drag; height: 51px; display: flex; align-items: center; justify-content: space-between; padding: 0 9px 0 13px; border-bottom: 1px solid var(--widget-line); background: linear-gradient(90deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .025)); }
 .identity { min-width: 0; display: flex; align-items: center; gap: 7px; }

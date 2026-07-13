@@ -1,6 +1,6 @@
 {
   "name": "sentinel-server-monitor",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Desktop server resource monitor over SSH",
   "author": "bably7",
   "license": "MIT",
@@ -30,6 +30,7 @@
     "appId": "com.sentinel.servermonitor",
     "productName": "Sentinel 服务器监控",
     "asarUnpack": [
+      "src/image-normalize.ps1",
       "src/window-region.ps1"
     ],
     "files": [

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, safeStorage, screen, nativeTheme, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage, screen, nativeTheme, dialog, nativeImage } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const os = require('node:os');
@@ -7,6 +7,12 @@ const { randomUUID, createHash } = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { Client } = require('ssh2');
 const { METRICS_COMMAND, parseMetrics, clearCpuHistory } = require('./metrics');
+const { parseImageSize } = require('./image-size');
+
+const MAX_BACKGROUND_SOURCE_BYTES = 20 * 1024 * 1024;
+const MAX_BACKGROUND_OUTPUT_BYTES = 16 * 1024 * 1024;
+const MAX_BACKGROUND_DIMENSION = 8192;
+const MAX_BACKGROUND_PIXELS = 35_000_000;
 
 const SAMPLE_SERVER = {
   id: 'local-demo',
@@ -24,6 +30,8 @@ let mainRestoreBounds;
 let selectedServerId;
 let serverMutationQueue = Promise.resolve();
 let serverSelectionQueue = Promise.resolve();
+let backgroundMutationQueue = Promise.resolve();
+let backgroundCache;
 const regionQueues = new WeakMap();
 const regionTimers = new WeakMap();
 const fingerprintChecks = new Map();
@@ -156,6 +164,126 @@ function createWidget() {
 
 function configPath() {
   return path.join(app.getPath('userData'), 'servers.json');
+}
+
+function backgroundPath() {
+  return path.join(app.getPath('userData'), 'background.image');
+}
+
+function validateBackgroundMetadata(metadata) {
+  if (!metadata.width || !metadata.height
+    || metadata.width > MAX_BACKGROUND_DIMENSION
+    || metadata.height > MAX_BACKGROUND_DIMENSION
+    || metadata.width * metadata.height > MAX_BACKGROUND_PIXELS) {
+    throw new Error('背景图片尺寸过大，宽高不能超过 8192 像素且总像素不能超过 3500 万');
+  }
+}
+
+function normalizeBackground(sourcePath, outputPath, format) {
+  const script = path.join(__dirname, 'image-normalize.ps1').replace('app.asar', 'app.asar.unpacked');
+  return new Promise((resolve, reject) => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, sourcePath, outputPath, format],
+      { windowsHide: true, timeout: 60000 },
+      (error) => (error ? reject(new Error(`背景图片处理失败：${error.message}`)) : resolve()),
+    );
+  });
+}
+
+async function readBackground() {
+  if (backgroundCache) return backgroundCache;
+  try {
+    const stat = await fs.stat(backgroundPath());
+    if (!stat.isFile() || stat.size > MAX_BACKGROUND_OUTPUT_BYTES) throw new Error('自定义背景文件大小无效');
+    const image = await fs.readFile(backgroundPath());
+    const metadata = parseImageSize(image);
+    validateBackgroundMetadata(metadata);
+    if (nativeImage.createFromBuffer(image).isEmpty()) throw new Error('自定义背景文件无法解码');
+    const mime = metadata.format === 'png' ? 'image/png' : 'image/jpeg';
+    backgroundCache = { custom: true, dataUrl: `data:${mime};base64,${image.toString('base64')}` };
+  } catch (error) {
+    if (error.code !== 'ENOENT') console.error('Cannot read custom background:', error);
+    backgroundCache = { custom: false, dataUrl: '' };
+  }
+  return backgroundCache;
+}
+
+function broadcastBackground(background) {
+  mainWindow?.webContents.send('background:changed', background);
+  widgetWindow?.webContents.send('background:changed', background);
+}
+
+function mutateBackground(mutator) {
+  const operation = backgroundMutationQueue.then(mutator);
+  backgroundMutationQueue = operation.catch(() => {});
+  return operation;
+}
+
+async function chooseBackground() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '选择 Sentinel 背景图片',
+    buttonLabel: '使用此图片',
+    properties: ['openFile'],
+    filters: [
+      { name: '图片', extensions: ['jpg', 'jpeg', 'png'] },
+    ],
+  });
+  if (result.canceled || !result.filePaths[0]) return null;
+
+  const sourcePath = result.filePaths[0];
+  const stat = await fs.stat(sourcePath);
+  if (!stat.isFile() || stat.size > MAX_BACKGROUND_SOURCE_BYTES) throw new Error('背景图片不能超过 20 MB');
+  const source = await fs.readFile(sourcePath);
+  if (source.length > MAX_BACKGROUND_SOURCE_BYTES) throw new Error('背景图片不能超过 20 MB');
+  const metadata = parseImageSize(source);
+  validateBackgroundMetadata(metadata);
+
+  const target = backgroundPath();
+  const operationId = `${process.pid}.${randomUUID()}`;
+  const sourceTemporary = `${target}.${operationId}.source`;
+  const outputTemporary = `${target}.${operationId}.output`;
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  try {
+    await fs.writeFile(sourceTemporary, source);
+    await normalizeBackground(sourceTemporary, outputTemporary, metadata.format);
+    const outputStat = await fs.stat(outputTemporary);
+    if (!outputStat.isFile() || outputStat.size > MAX_BACKGROUND_OUTPUT_BYTES) {
+      throw new Error('优化后的背景图片仍超过 16 MB，请选择内容更简单或尺寸更小的图片');
+    }
+    const output = await fs.readFile(outputTemporary);
+    const outputMetadata = parseImageSize(output);
+    validateBackgroundMetadata(outputMetadata);
+    if (nativeImage.createFromBuffer(output).isEmpty()) throw new Error('优化后的背景图片无法解码');
+    await fs.rename(outputTemporary, target);
+    const background = {
+      custom: true,
+      dataUrl: `data:image/${outputMetadata.format};base64,${output.toString('base64')}`,
+    };
+    backgroundCache = background;
+    broadcastBackground(background);
+  } finally {
+    for (const temporary of [sourceTemporary, outputTemporary]) {
+      try {
+        await fs.unlink(temporary);
+      } catch (error) {
+        if (error.code !== 'ENOENT') console.error('Cannot clean background temporary file:', error);
+      }
+    }
+  }
+  return { custom: true };
+}
+
+async function resetBackground() {
+  try {
+    await fs.unlink(backgroundPath());
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  const background = { custom: false, dataUrl: '' };
+  backgroundCache = background;
+  broadcastBackground(background);
+  return { custom: false };
 }
 
 async function readServers() {
@@ -422,6 +550,21 @@ async function collectServerMetrics(server) {
 ipcMain.handle('servers:list', async (event) => {
   requireRenderer(event, [{ window: mainWindow, file: 'index.html' }, { window: widgetWindow, file: 'widget.html' }]);
   return (await readServers()).map(publicServer);
+});
+
+ipcMain.handle('background:get', async (event) => {
+  requireRenderer(event, [{ window: mainWindow, file: 'index.html' }, { window: widgetWindow, file: 'widget.html' }]);
+  return mutateBackground(readBackground);
+});
+
+ipcMain.handle('background:choose', async (event) => {
+  requireRenderer(event, [{ window: mainWindow, file: 'index.html' }]);
+  return mutateBackground(chooseBackground);
+});
+
+ipcMain.handle('background:reset', async (event) => {
+  requireRenderer(event, [{ window: mainWindow, file: 'index.html' }]);
+  return mutateBackground(resetBackground);
 });
 
 ipcMain.handle('servers:selected:get', async (event) => {

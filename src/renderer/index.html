@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:" />
     <title>Sentinel 服务器监控</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -31,6 +31,7 @@
           </div>
           <div class="header-actions">
             <div id="connection-status" class="status-pill" role="status" aria-live="polite"><span></span>等待数据</div>
+            <button id="background-settings" class="icon-button" title="更换背景图片" aria-label="更换背景图片">▧</button>
             <button id="show-widget" class="icon-button" title="显示桌面浮窗" aria-label="显示桌面浮窗">▣</button>
             <button id="refresh" class="icon-button" title="立即刷新" aria-label="立即刷新">↻</button>
             <button id="edit-server" class="icon-button" title="编辑服务器" aria-label="编辑服务器">⋯</button>
@@ -105,6 +106,14 @@
         <label id="reset-fingerprint-row" class="checkbox-label hidden"><input id="reset-fingerprint" type="checkbox" /> 下次连接时重新确认 SSH 主机密钥</label>
         <p class="security-note">凭据使用操作系统安全存储加密，仅保存在当前电脑。</p>
         <div class="dialog-actions"><button type="button" id="delete-server" class="danger hidden">删除节点</button><span></span><button type="button" id="cancel-dialog" class="secondary">取消</button><button type="submit" class="primary">保存并连接</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="background-dialog" aria-labelledby="background-dialog-title" aria-describedby="background-note">
+      <form method="dialog">
+        <div class="dialog-header"><h2 id="background-dialog-title">背景图片</h2><button type="button" id="close-background-dialog" aria-label="关闭背景设置">×</button></div>
+        <p id="background-note" class="background-note">选择 JPG 或 PNG 图片。图片会优化后保存在本机，并同时用于主面板和桌面浮窗。</p>
+        <div class="dialog-actions"><button type="button" id="reset-background" class="secondary">恢复默认</button><span></span><button type="button" id="choose-background" class="primary">选择图片</button></div>
       </form>
     </dialog>
 

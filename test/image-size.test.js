@@ -1,0 +1,49 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { parseImageSize } = require('../src/image-size');
+
+test('reads dimensions from a PNG header', () => {
+  const png = Buffer.alloc(33);
+  Buffer.from('89504e470d0a1a0a', 'hex').copy(png);
+  png.writeUInt32BE(13, 8);
+  png.write('IHDR', 12, 'ascii');
+  png.writeUInt32BE(1920, 16);
+  png.writeUInt32BE(1080, 20);
+  assert.deepEqual(parseImageSize(png), { format: 'png', width: 1920, height: 1080, orientation: 1 });
+});
+
+test('reads dimensions from a JPEG start-of-frame segment', () => {
+  const jpeg = Buffer.from([
+    0xff, 0xd8,
+    0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08, 0x04, 0x38, 0x07, 0x80,
+    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
+    0xff, 0xd9,
+  ]);
+  assert.deepEqual(parseImageSize(jpeg), { format: 'jpeg', width: 1920, height: 1080, orientation: 1 });
+});
+
+test('reads EXIF orientation from a JPEG APP1 segment', () => {
+  const exif = Buffer.from([
+    0xff, 0xd8,
+    0xff, 0xe1, 0x00, 0x22,
+    0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+    0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00,
+    0x01, 0x00,
+    0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08, 0x04, 0x38, 0x07, 0x80,
+    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
+    0xff, 0xd9,
+  ]);
+  assert.equal(parseImageSize(exif).orientation, 6);
+});
+
+test('rejects unsupported and malformed image data', () => {
+  assert.throws(() => parseImageSize(Buffer.from('not an image')), /JPG 或 PNG/);
+  assert.throws(() => parseImageSize(Buffer.from([0xff, 0xd8, 0xff, 0xd9])), /尺寸信息/);
+  assert.throws(() => parseImageSize(Buffer.concat([
+    Buffer.from('89504e470d0a1a0a', 'hex'),
+    Buffer.alloc(16),
+  ])), /IHDR/);
+});

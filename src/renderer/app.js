@@ -5,11 +5,13 @@ const state = {
   history: [],
   timer: null,
   collecting: false,
+  backgroundCustom: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
 const list = $('#server-list');
 const dialog = $('#server-dialog');
+const backgroundDialog = $('#background-dialog');
 const form = $('#server-form');
 const chart = $('#history-chart');
 
@@ -54,6 +56,20 @@ function showError(message = '') {
   const banner = $('#error-banner');
   banner.textContent = message;
   banner.classList.toggle('hidden', !message);
+}
+
+function applyBackground(background) {
+  state.backgroundCustom = Boolean(background?.custom);
+  const value = background?.dataUrl
+    ? `url("${background.dataUrl}")`
+    : 'url("assets/background.jpg")';
+  document.documentElement.style.setProperty('--wallpaper-image', value);
+  $('#reset-background').disabled = !background?.custom;
+}
+
+function setBackgroundBusy(busy) {
+  $('#choose-background').disabled = busy;
+  $('#reset-background').disabled = busy || !state.backgroundCustom;
 }
 
 function resetMetricsDisplay() {
@@ -224,6 +240,7 @@ list.addEventListener('click', (event) => {
 $('#add-server').addEventListener('click', () => openDialog());
 $('#edit-server').addEventListener('click', () => openDialog(state.servers.find((server) => server.id === state.selectedId)));
 $('#refresh').addEventListener('click', collect);
+$('#background-settings').addEventListener('click', () => backgroundDialog.showModal());
 $('#show-widget').addEventListener('click', () => window.monitor.windowAction('show-widget'));
 $('#window-minimize').addEventListener('click', () => window.monitor.windowAction('minimize-main'));
 $('#window-maximize').addEventListener('click', () => window.monitor.windowAction('toggle-maximize-main'));
@@ -232,7 +249,32 @@ $('#process-search').addEventListener('input', renderProcesses);
 $('#auth-type').addEventListener('change', updateSecretLabel);
 $('#close-dialog').addEventListener('click', () => dialog.close());
 $('#cancel-dialog').addEventListener('click', () => dialog.close());
+$('#close-background-dialog').addEventListener('click', () => backgroundDialog.close());
+$('#choose-background').addEventListener('click', async () => {
+  setBackgroundBusy(true);
+  try {
+    const result = await window.monitor.chooseBackground();
+    if (!result) return;
+    backgroundDialog.close();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setBackgroundBusy(false);
+  }
+});
+$('#reset-background').addEventListener('click', async () => {
+  setBackgroundBusy(true);
+  try {
+    await window.monitor.resetBackground();
+    backgroundDialog.close();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setBackgroundBusy(false);
+  }
+});
 window.addEventListener('resize', drawChart);
+window.monitor.onBackgroundChanged(applyBackground);
 window.monitor.onWindowMaximized((maximized) => {
   document.body.classList.toggle('maximized', maximized);
   $('#window-maximize').textContent = maximized ? '❐' : '□';
@@ -271,7 +313,12 @@ $('#delete-server').addEventListener('click', async () => {
 });
 
 async function init() {
-  state.servers = await window.monitor.listServers();
+  const [servers, background] = await Promise.all([
+    window.monitor.listServers(),
+    window.monitor.getBackground(),
+  ]);
+  state.servers = servers;
+  applyBackground(background);
   selectServer((state.servers.find((server) => !server.demo) || state.servers[0]).id);
 }
 
