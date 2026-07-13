@@ -4,6 +4,16 @@
 
 [下载最新 Windows 安装程序](https://github.com/bably7/sentinel-server-monitor/releases/latest)
 
+## 界面预览
+
+### 主监控面板
+
+![Sentinel 主监控面板](docs/screenshots/dashboard.png)
+
+### 桌面浮窗
+
+<img src="docs/screenshots/widget.png" alt="Sentinel CPU 和内存桌面浮窗" width="318">
+
 ## 功能
 
 - 实时查看 CPU 使用率、核心数和 1/5/15 分钟负载
