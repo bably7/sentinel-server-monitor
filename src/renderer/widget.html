@@ -10,12 +10,12 @@
   <body>
     <section id="widget" class="widget">
       <header>
-        <div class="identity"><span id="status-dot" class="status-dot"></span><strong id="server-name">正在连接</strong></div>
+        <div class="identity" role="status" aria-live="polite"><span id="status-dot" class="status-dot"></span><strong id="server-name">正在连接</strong></div>
         <div class="actions">
-          <button id="refresh" title="立即刷新">↻</button>
-          <button id="collapse" title="折叠">−</button>
-          <button id="open-main" title="打开主面板">□</button>
-          <button id="close" title="关闭浮窗">×</button>
+          <button id="refresh" title="立即刷新" aria-label="立即刷新浮窗">↻</button>
+          <button id="collapse" title="折叠" aria-label="折叠或展开浮窗" aria-expanded="true">−</button>
+          <button id="open-main" title="打开主面板" aria-label="打开主监控面板">□</button>
+          <button id="close" title="关闭浮窗" aria-label="关闭浮窗">×</button>
         </div>
       </header>
       <div class="metrics">

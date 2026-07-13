@@ -12,33 +12,38 @@
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark"><span></span><span></span><span></span></div>
-          <div><strong>SENTINEL</strong><small>SERVER OBSERVATORY</small></div>
+          <div><strong>SENTINEL</strong></div>
         </div>
         <div class="side-label">服务器节点</div>
         <nav id="server-list" class="server-list"></nav>
         <button id="add-server" class="add-button"><span>＋</span> 添加服务器</button>
         <div class="side-footer">
-          <span class="pulse-dot"></span>
-          <div><strong>监控服务正常</strong><small>自动刷新 · 5 秒</small></div>
+          <span id="monitor-dot" class="pulse-dot"></span>
+          <div><strong id="monitor-state">等待服务器数据</strong><small>自动刷新 · 5 秒</small></div>
         </div>
       </aside>
 
       <main>
         <header class="topbar">
-          <div>
-            <div class="eyebrow">实时运行概览</div>
+          <div class="server-heading">
             <h1 id="server-title">正在连接...</h1>
+            <small id="last-update">尚未获取数据</small>
           </div>
           <div class="header-actions">
-            <div id="connection-status" class="status-pill"><span></span>等待数据</div>
-            <button id="show-widget" class="icon-button" title="显示桌面浮窗">▣</button>
-            <button id="refresh" class="icon-button" title="立即刷新">↻</button>
-            <button id="edit-server" class="icon-button" title="编辑服务器">⋯</button>
+            <div id="connection-status" class="status-pill" role="status" aria-live="polite"><span></span>等待数据</div>
+            <button id="show-widget" class="icon-button" title="显示桌面浮窗" aria-label="显示桌面浮窗">▣</button>
+            <button id="refresh" class="icon-button" title="立即刷新" aria-label="立即刷新">↻</button>
+            <button id="edit-server" class="icon-button" title="编辑服务器" aria-label="编辑服务器">⋯</button>
+            <div class="window-controls">
+              <button id="window-minimize" class="window-button" title="最小化" aria-label="最小化窗口">−</button>
+              <button id="window-maximize" class="window-button" title="最大化" aria-label="最大化窗口">□</button>
+              <button id="window-close" class="window-button close" title="关闭" aria-label="关闭主窗口">×</button>
+            </div>
           </div>
         </header>
 
         <section class="content">
-          <div id="error-banner" class="error-banner hidden"></div>
+          <div id="error-banner" class="error-banner hidden" role="alert" aria-live="assertive"></div>
           <div class="summary-grid">
             <article class="metric-card cpu-card">
               <div class="metric-heading"><span class="metric-icon">CPU</span><span>处理器负载</span><small id="cpu-cores">-- 核心</small></div>
@@ -55,7 +60,7 @@
               </div>
             </article>
             <article class="metric-card uptime-card">
-              <div class="metric-heading"><span class="metric-icon">UP</span><span>持续运行</span><small id="system-os">--</small></div>
+              <div class="metric-heading"><span class="metric-icon">UP</span><span>持续运行</span></div>
               <div class="uptime-value" id="uptime-value">--</div>
               <div class="uptime-line"><span></span><span></span><span></span><span></span><span></span></div>
             </article>
@@ -63,18 +68,18 @@
 
           <div class="dashboard-grid">
             <article class="panel chart-panel">
-              <div class="panel-header"><div><span class="kicker">RESOURCE TIMELINE</span><h2>资源趋势</h2></div><div class="legend"><span class="cpu-legend">CPU</span><span class="memory-legend">内存</span></div></div>
+              <div class="panel-header"><h2>资源趋势</h2><div class="legend"><span class="cpu-legend">CPU</span><span class="memory-legend">内存</span></div></div>
               <canvas id="history-chart" height="260"></canvas>
             </article>
             <article class="panel disk-panel">
-              <div class="panel-header"><div><span class="kicker">STORAGE ARRAY</span><h2>存储空间</h2></div><span id="disk-count" class="counter">0 卷</span></div>
+              <div class="panel-header"><h2>存储空间</h2><span id="disk-count" class="counter">0 卷</span></div>
               <div id="disk-list" class="disk-list"></div>
             </article>
           </div>
 
           <article class="panel process-panel">
             <div class="panel-header">
-              <div><span class="kicker">ACTIVE WORKLOADS</span><h2>主要项目与进程</h2></div>
+              <h2>主要项目与进程</h2>
               <div class="table-actions"><input id="process-search" type="search" placeholder="搜索项目或命令..." /><span id="process-count" class="counter">0 个进程</span></div>
             </div>
             <div class="table-wrap">
@@ -84,20 +89,20 @@
               </table>
             </div>
           </article>
-          <footer><span id="last-update">尚未获取数据</span><span>Sentinel Desktop · SSH encrypted transport</span></footer>
         </section>
       </main>
     </div>
 
-    <dialog id="server-dialog">
+    <dialog id="server-dialog" aria-labelledby="dialog-title">
       <form id="server-form" method="dialog">
-        <div class="dialog-header"><div><span class="kicker">NODE CONFIGURATION</span><h2 id="dialog-title">添加服务器</h2></div><button type="button" id="close-dialog">×</button></div>
+        <div class="dialog-header"><h2 id="dialog-title">添加服务器</h2><button type="button" id="close-dialog" aria-label="关闭服务器配置">×</button></div>
         <input type="hidden" id="server-id" />
         <label>显示名称<input id="server-name" required placeholder="例如：生产环境 API" /></label>
         <div class="form-row"><label>服务器地址<input id="server-host" required placeholder="192.168.1.10" /></label><label class="port-label">SSH 端口<input id="server-port" type="number" min="1" max="65535" value="22" /></label></div>
         <label>SSH 用户名<input id="server-username" required placeholder="ubuntu" /></label>
         <label>认证方式<select id="auth-type"><option value="password">密码</option><option value="key">私钥内容</option></select></label>
         <label><span id="secret-label">SSH 密码</span><textarea id="server-secret" rows="4" placeholder="编辑时留空将保留原凭据"></textarea></label>
+        <label id="reset-fingerprint-row" class="checkbox-label hidden"><input id="reset-fingerprint" type="checkbox" /> 下次连接时重新确认 SSH 主机密钥</label>
         <p class="security-note">凭据使用操作系统安全存储加密，仅保存在当前电脑。</p>
         <div class="dialog-actions"><button type="button" id="delete-server" class="danger hidden">删除节点</button><span></span><button type="button" id="cancel-dialog" class="secondary">取消</button><button type="submit" class="primary">保存并连接</button></div>
       </form>

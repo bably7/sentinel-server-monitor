@@ -1,8 +1,18 @@
 {
   "name": "sentinel-server-monitor",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Desktop server resource monitor over SSH",
+  "author": "bably7",
+  "license": "MIT",
+  "homepage": "https://github.com/bably7/sentinel-server-monitor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bably7/sentinel-server-monitor.git"
+  },
   "main": "src/main.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "start": "electron .",
     "test": "node --test",
@@ -13,18 +23,23 @@
     "ssh2": "^1.16.0"
   },
   "devDependencies": {
-    "electron": "^37.2.0",
+    "electron": "^43.1.0",
     "electron-builder": "^26.0.12"
   },
   "build": {
     "appId": "com.sentinel.servermonitor",
     "productName": "Sentinel 服务器监控",
+    "asarUnpack": [
+      "src/window-region.ps1"
+    ],
     "files": [
       "src/**/*",
-      "package.json"
+      "package.json",
+      "LICENSE"
     ],
     "win": {
       "target": "nsis",
+      "icon": "build/icon.ico",
       "artifactName": "Sentinel-Server-Monitor-Setup-${version}.${ext}"
     },
     "nsis": {

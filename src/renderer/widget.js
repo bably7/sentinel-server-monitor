@@ -15,19 +15,30 @@ function setError(message) {
   $('#server-name').textContent = `连接异常：${message}`;
 }
 
+function resetMetrics() {
+  $('#status-dot').classList.remove('error');
+  setMetric('cpu', 0);
+  setMetric('memory', 0);
+  $('#cpu-value').textContent = '--%';
+  $('#memory-value').textContent = '--%';
+}
+
 async function collect() {
   if (!serverId || collecting) return;
+  const requestedId = serverId;
   collecting = true;
   try {
-    const metrics = await window.monitor.collectMetrics(serverId);
+    const metrics = await window.monitor.collectMetrics(requestedId);
+    if (requestedId !== serverId) return;
     $('#status-dot').classList.remove('error');
     $('#server-name').textContent = serverName;
     setMetric('cpu', metrics.cpu.percent);
     setMetric('memory', metrics.memory.percent);
   } catch (error) {
-    setError(error.message);
+    if (requestedId === serverId) setError(error.message);
   } finally {
     collecting = false;
+    if (requestedId !== serverId) collect();
   }
 }
 
@@ -38,17 +49,26 @@ $('#collapse').addEventListener('click', async () => {
   collapsed = !collapsed;
   $('#widget').classList.toggle('collapsed', collapsed);
   $('#collapse').textContent = collapsed ? '+' : '−';
+  $('#collapse').setAttribute('aria-expanded', String(!collapsed));
   await window.monitor.windowAction(collapsed ? 'collapse-widget' : 'expand-widget');
 });
 
 async function init() {
-  const servers = await window.monitor.listServers();
-  const server = servers.find((item) => !item.demo) || servers[0];
+  const server = await window.monitor.selectedServer();
   serverId = server.id;
   serverName = server.name;
+  resetMetrics();
   $('#server-name').textContent = serverName;
   await collect();
   setInterval(collect, 5000);
 }
+
+window.monitor.onSelectedServer((server) => {
+  serverId = server.id;
+  serverName = server.name;
+  resetMetrics();
+  $('#server-name').textContent = serverName;
+  collect();
+});
 
 init().catch((error) => setError(error.message));

@@ -37,7 +37,7 @@ function renderServers() {
   list.innerHTML = state.servers.map((server) => `
     <button class="server-item ${server.id === state.selectedId ? 'active' : ''}" data-id="${escapeHtml(server.id)}">
       <span class="node-icon">${server.demo ? 'PC' : 'SSH'}</span>
-      <span><strong>${escapeHtml(server.name)}</strong><small>${escapeHtml(server.demo ? '可视化演示数据' : `${server.username}@${server.host}`)}</small></span>
+      <span><strong>${escapeHtml(server.name)}</strong></span>
       <span class="node-state"></span>
     </button>`).join('');
 }
@@ -46,12 +46,34 @@ function setStatus(text, isError = false) {
   const status = $('#connection-status');
   status.lastChild.textContent = text;
   status.classList.toggle('error', isError);
+  $('#monitor-state').textContent = isError ? '服务器连接异常' : text;
+  $('#monitor-dot').classList.toggle('error', isError);
 }
 
 function showError(message = '') {
   const banner = $('#error-banner');
   banner.textContent = message;
   banner.classList.toggle('hidden', !message);
+}
+
+function resetMetricsDisplay() {
+  state.metrics = null;
+  state.history = [];
+  $('#cpu-value').textContent = '--';
+  $('#cpu-cores').textContent = '-- 核心';
+  $('#cpu-load').textContent = '负载 -- / -- / --';
+  $('#cpu-gauge').style.setProperty('--value', 0);
+  $('#memory-value').textContent = '--';
+  $('#memory-detail').textContent = '-- / --';
+  $('#memory-free').textContent = '剩余 --';
+  $('#memory-gauge').style.setProperty('--value', 0);
+  $('#uptime-value').textContent = '--';
+  $('#last-update').textContent = '正在获取数据';
+  $('#disk-count').textContent = '0 卷';
+  $('#disk-list').innerHTML = '<div class="empty">正在获取存储数据</div>';
+  $('#process-count').textContent = '0 个进程';
+  $('#process-table').innerHTML = '<tr><td colspan="5">正在获取进程数据</td></tr>';
+  drawChart();
 }
 
 function renderMetrics(metrics) {
@@ -68,7 +90,6 @@ function renderMetrics(metrics) {
   $('#memory-free').textContent = `剩余 ${bytes(metrics.memory.total - metrics.memory.used)}`;
   $('#memory-gauge').style.setProperty('--value', metrics.memory.percent);
   $('#uptime-value').textContent = duration(metrics.uptime);
-  $('#system-os').textContent = metrics.os || '--';
   $('#server-title').textContent = state.servers.find((server) => server.id === state.selectedId)?.name || '服务器概览';
   $('#last-update').textContent = `最后更新 ${new Date(metrics.timestamp).toLocaleTimeString('zh-CN', { hour12: false })}`;
 
@@ -87,9 +108,10 @@ function renderMetrics(metrics) {
 function renderProcesses() {
   const search = $('#process-search').value.trim().toLowerCase();
   const processes = (state.metrics?.processes || []).filter((process) => `${process.name} ${process.command}`.toLowerCase().includes(search));
-  $('#process-count').textContent = `${processes.length} 个进程`;
-  $('#process-table').innerHTML = processes.map((process) => `
-    <tr><td><strong>${escapeHtml(process.name)}</strong><small>${escapeHtml(process.command)}</small></td><td>${process.pid}</td><td>${process.cpu.toFixed(1)}%</td><td>${bytes(process.memory)}</td><td><div class="usage-track"><span style="width:${Math.min(100, process.cpu * 3)}%"></span></div></td></tr>`).join('') || '<tr><td colspan="5">没有匹配的进程</td></tr>';
+  const visibleProcesses = processes.slice(0, 4);
+  $('#process-count').textContent = processes.length > 4 ? `${processes.length} 个 · 显示前 4` : `${processes.length} 个进程`;
+  $('#process-table').innerHTML = visibleProcesses.map((process) => `
+    <tr><td><strong>${escapeHtml(process.name)}</strong><small title="${escapeHtml(process.command)}">${escapeHtml(process.command)}</small></td><td>${process.pid}</td><td>${process.cpu.toFixed(1)}%</td><td>${bytes(process.memory)}</td><td><div class="usage-track"><span style="width:${Math.min(100, process.cpu * 3)}%"></span></div></td></tr>`).join('') || '<tr><td colspan="5">没有匹配的进程</td></tr>';
 }
 
 function drawChart() {
@@ -98,6 +120,7 @@ function drawChart() {
   chart.width = rect.width * scale;
   chart.height = rect.height * scale;
   const ctx = chart.getContext('2d');
+  const styles = getComputedStyle(document.documentElement);
   ctx.scale(scale, scale);
   const width = rect.width;
   const height = rect.height;
@@ -106,8 +129,8 @@ function drawChart() {
   const innerHeight = height - padding.top - padding.bottom;
 
   ctx.font = '8px Consolas';
-  ctx.fillStyle = '#53606a';
-  ctx.strokeStyle = '#222b33';
+  ctx.fillStyle = styles.getPropertyValue('--chart-label').trim();
+  ctx.strokeStyle = styles.getPropertyValue('--chart-grid').trim();
   ctx.lineWidth = 1;
   for (let percent = 0; percent <= 100; percent += 25) {
     const y = padding.top + innerHeight - (percent / 100) * innerHeight;
@@ -125,36 +148,49 @@ function drawChart() {
     });
     ctx.strokeStyle = color; ctx.lineWidth = 1.7; ctx.shadowColor = color; ctx.shadowBlur = 7; ctx.stroke(); ctx.shadowBlur = 0;
   };
-  draw('cpu', '#9bea53');
-  draw('memory', '#45d4ce');
+  draw('cpu', styles.getPropertyValue('--green').trim());
+  draw('memory', styles.getPropertyValue('--cyan').trim());
 }
 
 async function collect() {
   if (!state.selectedId || state.collecting) return;
+  const requestedId = state.selectedId;
   state.collecting = true;
   setStatus('正在采集');
   try {
-    const metrics = await window.monitor.collectMetrics(state.selectedId);
+    const metrics = await window.monitor.collectMetrics(requestedId);
+    if (requestedId !== state.selectedId) return;
     renderMetrics(metrics);
     setStatus('连接正常');
     showError();
   } catch (error) {
-    setStatus('连接异常', true);
-    showError(error.message);
+    if (requestedId === state.selectedId) {
+      setStatus('连接异常', true);
+      showError(error.message);
+    }
   } finally {
     state.collecting = false;
+    if (requestedId !== state.selectedId) collect();
   }
 }
 
-function selectServer(id) {
+async function selectServer(id) {
   state.selectedId = id;
-  state.metrics = null;
-  state.history = [];
+  resetMetricsDisplay();
+  setStatus('正在切换');
+  showError();
   renderServers();
   const server = state.servers.find((item) => item.id === id);
   $('#server-title').textContent = server?.name || '服务器概览';
   $('#edit-server').classList.toggle('hidden', server?.demo);
   clearInterval(state.timer);
+  try {
+    await window.monitor.selectServer(id);
+  } catch (error) {
+    showError(error.message);
+    return;
+  }
+  if (id !== state.selectedId) return;
   collect();
   state.timer = setInterval(collect, 5000);
 }
@@ -169,6 +205,8 @@ function openDialog(server = null) {
   $('#auth-type').value = server?.authType || 'password';
   $('#dialog-title').textContent = server ? '编辑服务器' : '添加服务器';
   $('#delete-server').classList.toggle('hidden', !server);
+  $('#reset-fingerprint-row').classList.toggle('hidden', !server);
+  $('#reset-fingerprint').checked = false;
   updateSecretLabel();
   dialog.showModal();
 }
@@ -187,11 +225,20 @@ $('#add-server').addEventListener('click', () => openDialog());
 $('#edit-server').addEventListener('click', () => openDialog(state.servers.find((server) => server.id === state.selectedId)));
 $('#refresh').addEventListener('click', collect);
 $('#show-widget').addEventListener('click', () => window.monitor.windowAction('show-widget'));
+$('#window-minimize').addEventListener('click', () => window.monitor.windowAction('minimize-main'));
+$('#window-maximize').addEventListener('click', () => window.monitor.windowAction('toggle-maximize-main'));
+$('#window-close').addEventListener('click', () => window.monitor.windowAction('close-main'));
 $('#process-search').addEventListener('input', renderProcesses);
 $('#auth-type').addEventListener('change', updateSecretLabel);
 $('#close-dialog').addEventListener('click', () => dialog.close());
 $('#cancel-dialog').addEventListener('click', () => dialog.close());
 window.addEventListener('resize', drawChart);
+window.monitor.onWindowMaximized((maximized) => {
+  document.body.classList.toggle('maximized', maximized);
+  $('#window-maximize').textContent = maximized ? '❐' : '□';
+  $('#window-maximize').title = maximized ? '还原' : '最大化';
+  $('#window-maximize').setAttribute('aria-label', maximized ? '还原窗口' : '最大化窗口');
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -204,6 +251,7 @@ form.addEventListener('submit', async (event) => {
       username: $('#server-username').value,
       authType: $('#auth-type').value,
       secret: $('#server-secret').value,
+      resetFingerprint: $('#reset-fingerprint').checked,
     });
     state.servers = await window.monitor.listServers();
     dialog.close();
@@ -219,7 +267,7 @@ $('#delete-server').addEventListener('click', async () => {
   await window.monitor.deleteServer(id);
   state.servers = await window.monitor.listServers();
   dialog.close();
-  selectServer(state.servers[0].id);
+  selectServer((state.servers.find((server) => !server.demo) || state.servers[0]).id);
 });
 
 async function init() {
