@@ -2,6 +2,8 @@
 
 一款通过 SSH 采集 Linux 服务器指标的 Windows 桌面监控工具。无需在服务器安装 Agent。
 
+[下载最新 Windows 安装程序](https://github.com/bably7/sentinel-server-monitor/releases/latest)
+
 ## 功能
 
 - 实时查看 CPU 使用率、核心数和 1/5/15 分钟负载
@@ -14,6 +16,13 @@
 - SSH 密码或 OpenSSH 私钥认证
 - 凭据通过 Electron `safeStorage` 调用 Windows DPAPI 加密保存
 - 内置本机演示节点，安装后可立即预览
+- 界面始终显示用户配置的服务器名称，不使用云服务器自动主机名覆盖
+
+## 安装
+
+从 [Releases](https://github.com/bably7/sentinel-server-monitor/releases) 下载 `Sentinel-Server-Monitor-Setup-1.0.1.exe`，运行后按提示选择安装目录。
+
+首次打开后点击“添加服务器”，填写服务器显示名称、SSH 地址、端口、用户名以及密码或私钥。服务器凭据仅加密保存在当前电脑。
 
 ## 运行
 
@@ -31,6 +40,19 @@ npm run dist
 ```
 
 安装程序生成在 `dist` 目录。
+
+## 版本记录
+
+### v1.0.1
+
+- 新增始终置顶的 CPU、内存桌面浮窗
+- 支持浮窗拖动、折叠、刷新和打开主面板
+- 增大浮窗主要数据字号并移除非必要信息
+- 修复服务器名称被 Linux 自动主机名覆盖的问题
+
+### v1.0.0
+
+- 首个公开版本，支持通过 SSH 监控 CPU、内存、磁盘和主要进程
 
 ## 服务器要求
 

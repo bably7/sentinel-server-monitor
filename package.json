@@ -1,6 +1,6 @@
 {
   "name": "sentinel-server-monitor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop server resource monitor over SSH",
   "main": "src/main.js",
   "scripts": {
@@ -24,7 +24,8 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "Sentinel-Server-Monitor-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

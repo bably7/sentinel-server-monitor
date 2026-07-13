@@ -1,5 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
 let serverId;
+let serverName = '服务器监控';
 let collecting = false;
 let collapsed = false;
 
@@ -20,7 +21,7 @@ async function collect() {
   try {
     const metrics = await window.monitor.collectMetrics(serverId);
     $('#status-dot').classList.remove('error');
-    $('#server-name').textContent = metrics.hostname || '服务器在线';
+    $('#server-name').textContent = serverName;
     setMetric('cpu', metrics.cpu.percent);
     setMetric('memory', metrics.memory.percent);
   } catch (error) {
@@ -44,7 +45,8 @@ async function init() {
   const servers = await window.monitor.listServers();
   const server = servers.find((item) => !item.demo) || servers[0];
   serverId = server.id;
-  $('#server-name').textContent = server.name;
+  serverName = server.name;
+  $('#server-name').textContent = serverName;
   await collect();
   setInterval(collect, 5000);
 }

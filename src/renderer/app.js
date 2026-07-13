@@ -69,7 +69,7 @@ function renderMetrics(metrics) {
   $('#memory-gauge').style.setProperty('--value', metrics.memory.percent);
   $('#uptime-value').textContent = duration(metrics.uptime);
   $('#system-os').textContent = metrics.os || '--';
-  $('#server-title').textContent = metrics.hostname || state.servers.find((server) => server.id === state.selectedId)?.name;
+  $('#server-title').textContent = state.servers.find((server) => server.id === state.selectedId)?.name || '服务器概览';
   $('#last-update').textContent = `最后更新 ${new Date(metrics.timestamp).toLocaleTimeString('zh-CN', { hour12: false })}`;
 
   $('#disk-count').textContent = `${metrics.disks.length} 卷`;
