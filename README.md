@@ -38,7 +38,7 @@
 
 ## 安装
 
-从 [Releases](https://github.com/bably7/sentinel-server-monitor/releases) 下载 `Sentinel-Server-Monitor-Setup-1.0.3.exe`，运行后按提示选择安装目录。
+从 [Releases](https://github.com/bably7/sentinel-server-monitor/releases) 下载 `Sentinel-Server-Monitor-Setup-1.0.4.exe`，运行后按提示选择安装目录。
 
 首次打开后点击“添加服务器”，填写服务器显示名称、SSH 地址、端口、用户名以及密码或私钥。服务器凭据仅加密保存在当前电脑。
 
@@ -68,6 +68,13 @@ npm run dist
 安装程序生成在 `dist` 目录。
 
 ## 版本记录
+
+### v1.0.4
+
+- 修复从旧版升级后 SSH 主机密钥指纹格式变化导致的误报
+- 仅当旧十六进制 SHA-256 指纹与当前主机公钥完全匹配时自动迁移为标准 OpenSSH Base64 格式
+- 指纹不匹配或迁移保存失败时继续阻止连接，不会提前发送 SSH 凭据
+- 增加当前、旧版、错误指纹和异步迁移时序测试
 
 ### v1.0.3
 

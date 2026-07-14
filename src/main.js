@@ -3,11 +3,12 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const os = require('node:os');
 const fs = require('node:fs/promises');
-const { randomUUID, createHash } = require('node:crypto');
+const { randomUUID } = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { Client } = require('ssh2');
 const { METRICS_COMMAND, parseMetrics, clearCpuHistory } = require('./metrics');
 const { parseImageSize } = require('./image-size');
+const { verifyHostKey } = require('./ssh-fingerprint');
 
 const MAX_BACKGROUND_SOURCE_BYTES = 20 * 1024 * 1024;
 const MAX_BACKGROUND_OUTPUT_BYTES = 16 * 1024 * 1024;
@@ -388,6 +389,20 @@ async function confirmFingerprint(server, fingerprint) {
   return check;
 }
 
+async function migrateLegacyFingerprint(server, legacyFingerprint, fingerprint) {
+  await mutateServers((servers) => {
+    const current = servers.find((item) => item.id === server.id);
+    if (!current || current.host !== server.host || current.port !== server.port) {
+      throw new Error('服务器配置已变化，请重新连接');
+    }
+    if (current.hostFingerprint !== legacyFingerprint && current.hostFingerprint !== fingerprint) {
+      throw new Error('服务器主机密钥记录已变化，请重新连接');
+    }
+    current.hostFingerprint = fingerprint;
+    server.hostFingerprint = fingerprint;
+  });
+}
+
 function collectLocalMetrics() {
   const cpus = os.cpus();
   const totals = cpus.reduce(
@@ -457,19 +472,12 @@ function execSsh(server, command) {
       username: server.username,
       readyTimeout: 120000,
       keepaliveInterval: 5000,
-      hostVerifier: (hostKey, callback) => {
-        const fingerprint = createHash('sha256').update(hostKey).digest('base64').replace(/=+$/, '');
-        fingerprintMismatch = Boolean(server.hostFingerprint && server.hostFingerprint !== fingerprint);
-        if (fingerprintMismatch) return callback(false);
-        if (server.hostFingerprint) return callback(true);
-        confirmFingerprint(server, fingerprint).then((trusted) => {
-          fingerprintRejected = !trusted;
-          callback(trusted);
-        }, () => {
-          fingerprintRejected = true;
-          callback(false);
-        });
-      },
+      hostVerifier: (hostKey, callback) => verifyHostKey(server.hostFingerprint, hostKey, {
+        migrate: (legacy, standard) => migrateLegacyFingerprint(server, legacy, standard),
+        confirm: (fingerprint) => confirmFingerprint(server, fingerprint),
+        onMismatch: () => (fingerprintMismatch = true),
+        onRejected: () => (fingerprintRejected = true),
+      }, callback),
     };
     if (server.authType === 'key') options.privateKey = decryptSecret(server.secret);
     else options.password = decryptSecret(server.secret);

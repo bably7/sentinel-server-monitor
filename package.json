@@ -1,6 +1,6 @@
 {
   "name": "sentinel-server-monitor",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Desktop server resource monitor over SSH",
   "author": "bably7",
   "license": "MIT",
